@@ -56,7 +56,15 @@ namespace Squirrel
                 return result;
             } 
             catch (FileLoadException) { return null; }
-            catch (BadImageFormatException) { return null; }
+            catch (BadImageFormatException)
+            {
+                var net5dll = executable.Replace(".exe", ".dll");
+
+                if (!File.Exists(net5dll))
+                    return null;
+
+                return GetAssemblySquirrelAwareVersion(net5dll);
+            }
         }
 
         static int? GetVersionBlockSquirrelAwareValue(string executable)

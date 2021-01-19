@@ -552,7 +552,8 @@ namespace Squirrel
                 }
 
                 string newVersionFolder = null;
-                if (newVersion != null) {
+                if (newVersion != null)
+                {
                     newVersionFolder = getDirectoryForRelease(newVersion).Name;
                     this.Log().Info("cleanDeadVersions: exclude new version folder {0}", newVersionFolder);
                 }
@@ -623,7 +624,6 @@ namespace Squirrel
                 var entries = ReleaseEntry.ParseReleaseFile(File.ReadAllText(releasesFile, Encoding.UTF8));
                 var pkgDir = Utility.PackageDirectoryForAppDir(rootAppDirectory);
                 var releaseEntry = default(ReleaseEntry);
-
                 foreach (var entry in entries) {
                     if (entry.Version == newVersion) {
                         releaseEntry = ReleaseEntry.GenerateFromFile(Path.Combine(pkgDir, entry.Filename));
