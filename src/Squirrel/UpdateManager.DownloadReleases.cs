@@ -86,6 +86,7 @@ namespace Squirrel
 
             void checksumPackage(ReleaseEntry downloadedRelease)
             {
+                return;
                 var targetPackage = new FileInfo(
                     Path.Combine(rootAppDirectory, "packages", downloadedRelease.Filename));
 

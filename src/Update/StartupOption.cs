@@ -30,6 +30,8 @@ namespace Squirrel.Update
                
         public StartupOption(string[] args) {
            optionSet = Parse(args);
+            updateAction = UpdateAction.Uninstall;
+            target = Environment.CurrentDirectory;
         }
 
         private OptionSet Parse(string[] args) {

@@ -191,17 +191,22 @@ namespace Squirrel
 
         public static async Task<Tuple<int, string>> InvokeProcessAsync(ProcessStartInfo psi, CancellationToken ct)
         {
-            var pi = Process.Start(psi);
-            await Task.Run(() => {
-                while (!ct.IsCancellationRequested) {
-                    if (pi.WaitForExit(2000)) return;
-                }
+            using (var pi = Process.Start(psi))
+            {
 
-                if (ct.IsCancellationRequested) {
-                    pi.Kill();
-                    ct.ThrowIfCancellationRequested();
-                }
-            });
+                await Task.Run(() =>
+                {
+                    while (!ct.IsCancellationRequested)
+                    {
+                        if (pi.WaitForExit(20000000)) return;
+                    }
+
+                    if (ct.IsCancellationRequested)
+                    {
+                        pi.Kill();
+                        ct.ThrowIfCancellationRequested();
+                    }
+                });
 
             string textResult = await pi.StandardOutput.ReadToEndAsync();
             if (String.IsNullOrWhiteSpace(textResult) || pi.ExitCode != 0) {
@@ -213,6 +218,7 @@ namespace Squirrel
             }
 
             return Tuple.Create(pi.ExitCode, textResult.Trim());
+            }
         }
 
         public static Task ForEachAsync<T>(this IEnumerable<T> source, Action<T> body, int degreeOfParallelism = 4)

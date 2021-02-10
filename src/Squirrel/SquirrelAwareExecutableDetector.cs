@@ -22,11 +22,12 @@ namespace Squirrel
 
             var di = new DirectoryInfo(directory);
 
-            return di.EnumerateFiles()
+            var files = di.EnumerateFiles()
                 .Where(x => x.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 .Select(x => x.FullName)
                 .Where(x => (GetPESquirrelAwareVersion(x) ?? -1) >= minimumVersion)
                 .ToList();
+            return files;
         }
 
         public static int? GetPESquirrelAwareVersion(string executable)
