@@ -4,9 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using Mono.Cecil;
 
 namespace Squirrel
@@ -15,6 +12,14 @@ namespace Squirrel
     {
         public static List<string> GetAllSquirrelAwareApps(string directory, int minimumVersion = 1)
         {
+            var net461Dir = Path.Combine(directory, "net461");
+            if (Directory.Exists(net461Dir))
+            {
+                // if there's a net461 subfolder, change the scan target to point there instead
+                // as we expect to find .net framework apps
+                directory = net461Dir;
+            }
+
             var di = new DirectoryInfo(directory);
 
             return di.EnumerateFiles()
