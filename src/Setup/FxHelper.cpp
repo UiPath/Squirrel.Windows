@@ -56,6 +56,22 @@ bool CFxHelper::IsDotNetInstalled(NetVersion required)
 	return true;
 }
 
+bool CFxHelper::Is64BitMachine()
+{
+	SYSTEM_INFO si{ 0 };
+	GetNativeSystemInfo(&si);
+
+	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) == PROCESSOR_ARCHITECTURE_IA64) || 
+		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) == PROCESSOR_ARCHITECTURE_AMD64))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 int CFxHelper::GetDotNetVersionReleaseNumber(NetVersion version)
 {
 	switch (version) {

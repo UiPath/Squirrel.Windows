@@ -142,8 +142,6 @@ namespace Squirrel.Update
 
         public async Task Install(bool silentInstall, ProgressSource progressSource, string sourceDirectory = null)
         {
-            Assert64Bit();
-
             sourceDirectory = sourceDirectory ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var releasesPath = Path.Combine(sourceDirectory, "RELEASES");
 
@@ -191,8 +189,6 @@ namespace Squirrel.Update
 
         public async Task Update(string updateUrl, string appName = null)
         {
-            Assert64Bit();
-
             appName = appName ?? getAppNameFromDirectory();
 
             this.Log().Info("Starting update, downloading from " + updateUrl);
@@ -796,12 +792,6 @@ namespace Squirrel.Update
 
             NativeMethods.GetStdHandle(StandardHandles.STD_ERROR_HANDLE);
             NativeMethods.GetStdHandle(StandardHandles.STD_OUTPUT_HANDLE);
-        }
-
-        static void Assert64Bit()
-        {
-            if (Environment.Is64BitOperatingSystem == false)
-                throw new InvalidOperationException("This application requires a 64 bit machine");
         }
     }
 
