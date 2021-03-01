@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "StubExecutable.h"
+#include <shellapi.h>
 
 #include "semver200.h"
 
@@ -40,12 +41,84 @@ wchar_t* FindOwnExecutableName()
 	return ret;
 }
 
+bool Is64BitMachine()
+{
+	SYSTEM_INFO si { 0 };
+	GetNativeSystemInfo(&si);
+
+	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) == PROCESSOR_ARCHITECTURE_IA64) ||
+		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) == PROCESSOR_ARCHITECTURE_AMD64))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void DeleteDirectory(const std::wstring& path)
+{
+	int len = path.length() + 2; // required to set 2 nulls at end of argument to SHFileOperation.
+	std::vector<wchar_t> tempdir;
+	tempdir.resize(len);
+	path.copy(&tempdir[0], path.length());
+
+	SHFILEOPSTRUCT file_op = {
+	   NULL,
+	   FO_DELETE,
+	   &tempdir[0],
+	   NULL,
+	   FOF_NOCONFIRMATION |
+	   FOF_NOERRORUI |
+	   FOF_SILENT,
+	   false,
+	   0,
+	   NULL };
+	SHFileOperation(&file_op);
+}
+
+void DeleteUnsupportedDirs(const std::wstring& searchPattern)
+{
+	//searchPattern: C:\Users\xxx\AppData\Local\UiPath\app-*
+	WIN32_FIND_DATA fileInfo = { 0 };
+	HANDLE hFile = FindFirstFile(searchPattern.c_str(), &fileInfo);
+	if (hFile == INVALID_HANDLE_VALUE) {
+		return;
+	}
+
+	version::Semver200_version thresholdVersion("21.0.0");
+
+	do {
+		std::wstring directoryName = fileInfo.cFileName;
+		if (!(fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			continue;
+		}
+		std::wstring fullDirectoryPath = searchPattern.substr(0, searchPattern.length() - 5) + directoryName;
+		std::wstring currentVersionName = directoryName.substr(4);   // Skip 'app-'
+
+		version::Semver200_version currentVersion(std::string(currentVersionName.begin(), currentVersionName.end()));
+
+		if (currentVersion > thresholdVersion)
+		{
+			// delete all directories greater than app-21.
+			DeleteDirectory(fullDirectoryPath);
+		}
+	} while (FindNextFile(hFile, &fileInfo));
+
+	FindClose(hFile);
+}
+
 std::wstring FindLatestAppDir() 
 {
 	std::wstring ourDir;
 	ourDir.assign(FindRootAppDir());
-
 	ourDir += L"\\app-*";
+	
+	if (!Is64BitMachine())
+	{
+		DeleteUnsupportedDirs(ourDir);
+	}
 
 	WIN32_FIND_DATA fileInfo = { 0 };
 	HANDLE hFile = FindFirstFile(ourDir.c_str(), &fileInfo);

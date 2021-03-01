@@ -80,6 +80,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		goto out;
 	}
 
+	if (!CFxHelper::Is64BitMachine())
+	{
+		// Explain this as nicely as possible and give up.
+		MessageBox(0L, L"This program cannot run on a 32 bit computer.", L"Incompatible Operating System", 0);
+		exitCode = E_FAIL;
+		goto out;
+	}
+
 	if (!CFxHelper::CanInstallDotNet4_5()) {
 		// Explain this as nicely as possible and give up.
 		MessageBox(0L, L"This program cannot run on Windows XP or before; it requires a later version of Windows.", L"Incompatible Operating System", 0);
