@@ -41,20 +41,35 @@ wchar_t* FindOwnExecutableName()
 	return ret;
 }
 
-bool Is64BitMachine()
+bool IsMachineSupported()
 {
+	// 32 bit not supported.
 	SYSTEM_INFO si { 0 };
 	GetNativeSystemInfo(&si);
-
-	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) == PROCESSOR_ARCHITECTURE_IA64) ||
-		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) == PROCESSOR_ARCHITECTURE_AMD64))
-	{
-		return true;
-	}
-	else
+	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) != PROCESSOR_ARCHITECTURE_IA64) &&
+		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) != PROCESSOR_ARCHITECTURE_AMD64))
 	{
 		return false;
 	}
+
+	//Windows 7 or lower not supported.
+
+	OSVERSIONINFOEX os{ 0 };
+	DWORDLONG dwlConditionMask = 0;
+	int op = VER_GREATER_EQUAL;
+	os.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+	os.dwMajorVersion = 6;
+	os.dwMinorVersion = 2;
+	os.wServicePackMajor = 0;
+	os.wServicePackMinor = 0;
+
+	VER_SET_CONDITION(dwlConditionMask, VER_MAJORVERSION, op);
+	VER_SET_CONDITION(dwlConditionMask, VER_MINORVERSION, op);
+
+	return VerifyVersionInfo(
+		&os,
+		VER_MAJORVERSION | VER_MINORVERSION,
+		dwlConditionMask);
 }
 
 void DeleteDirectory(const std::wstring& path)
@@ -115,7 +130,7 @@ std::wstring FindLatestAppDir()
 	ourDir.assign(FindRootAppDir());
 	ourDir += L"\\app-*";
 	
-	if (!Is64BitMachine())
+	if (!IsMachineSupported())
 	{
 		DeleteUnsupportedDirs(ourDir);
 	}
