@@ -132,7 +132,7 @@ namespace Squirrel.Update
                     break;
 #endif
                 case UpdateAction.Releasify:
-                    Releasify(opt.target, opt.releaseDir, opt.packagesDir, opt.bootstrapperExe, opt.backgroundGif, opt.signingParameters, opt.baseUrl, opt.setupIcon, !opt.noMsi, opt.packageAs64Bit, opt.frameworkVersion, !opt.noDelta);
+                    Releasify(opt.target, opt.releaseDir, opt.packagesDir, opt.bootstrapperExe, opt.backgroundGif, opt.signingParameters, opt.baseUrl, opt.setupIcon, !opt.noMsi, opt.packageAs64Bit, opt.frameworkVersion, !opt.noDelta, opt.extraStubNames);
                     break;
                 }
             }
@@ -291,7 +291,7 @@ namespace Squirrel.Update
             }
         }
 
-        public void Releasify(string package, string targetDir = null, string packagesDir = null, string bootstrapperExe = null, string backgroundGif = null, string signingOpts = null, string baseUrl = null, string setupIcon = null, bool generateMsi = true, bool packageAs64Bit = false, string frameworkVersion = null, bool generateDeltas = true)
+        public void Releasify(string package, string targetDir = null, string packagesDir = null, string bootstrapperExe = null, string backgroundGif = null, string signingOpts = null, string baseUrl = null, string setupIcon = null, bool generateMsi = true, bool packageAs64Bit = false, string frameworkVersion = null, bool generateDeltas = true, string extraStubNames = default)
         {
             ensureConsole();
 
@@ -344,7 +344,7 @@ namespace Squirrel.Update
                     new DirectoryInfo(pkgPath)
                                     .GetAllFilesRecursively("*.exe")
                                     .Where(x => !x.Name.ToLowerInvariant().Contains("squirrel.exe"))
-                                    .Where(x => Utility.IsFileTopLevelInPackage(x.FullName, pkgPath))
+                                    .Where(x => Utility.IsFileTopLevelInPackage(x.FullName, pkgPath) || Utility.IsStubNameExcepted(x.FullName, extraStubNames))
                                     .Where(x => Utility.ExecutableUsesWin32Subsystem(x.FullName))
                                     .ToList()
                                     .ForEachAsync(x => createExecutableStubForExe(x.FullName))

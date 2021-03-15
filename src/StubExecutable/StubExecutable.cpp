@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "StubExecutable.h"
 #include <shellapi.h>
+#include <queue>
 
 #include "semver200.h"
 
@@ -173,6 +174,44 @@ std::wstring FindLatestAppDir()
 	return ret.str();
 }
 
+std::wstring FindRealAppDir(const std::wstring& appdir, const std::wstring& appName)
+{
+	std::queue<std::wstring> directories;
+	directories.push(appdir);
+
+	while (directories.size() > 0)
+	{
+		WIN32_FIND_DATA fileInfo = { 0 };
+		std::wstring searchDir = directories.front();			//current search directory
+		std::wstring search = searchDir + L"\\*";				//current search string (all)
+		std::wstring match = searchDir + L"\\" + appName;			//current desired match
+		HANDLE hFile = FindFirstFile(search.c_str(), &fileInfo);
+		do
+		{
+			std::wstring crtFile = std::wstring(fileInfo.cFileName);
+			std::wstring crtFileFull = searchDir + L"\\" + crtFile;
+			if (fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				if (crtFile.compare(L".") == 0 || crtFile.compare(L"..") == 0)
+					continue;
+				directories.push(crtFileFull);
+			}
+			else if (match.compare(crtFileFull) == 0)
+			{
+				FindClose(hFile);
+				return searchDir;
+			}
+		} while (FindNextFile(hFile, &fileInfo) != 0);
+
+		//move to nextDir
+		FindClose(hFile);
+		directories.pop();
+	}
+
+	// odd that we didn't find it, revert to squirell error management.
+	return appdir;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -182,7 +221,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	appName.assign(FindOwnExecutableName());
 
 	std::wstring workingDir(FindLatestAppDir());
-	std::wstring fullPath(workingDir + L"\\" + appName);
+	std::wstring realWorkingDir(FindRealAppDir(workingDir, appName));
+	std::wstring fullPath(realWorkingDir + L"\\" + appName);
 
 	STARTUPINFO si = { 0 };
 	PROCESS_INFORMATION pi = { 0 };
@@ -197,7 +237,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	cmdLine += lpCmdLine;
 
 	wchar_t* lpCommandLine = wcsdup(cmdLine.c_str());
-	wchar_t* lpCurrentDirectory = wcsdup(workingDir.c_str());
+	wchar_t* lpCurrentDirectory = wcsdup(realWorkingDir.c_str());
 	if (!CreateProcess(NULL, lpCommandLine, NULL, NULL, true, 0, NULL, lpCurrentDirectory, &si, &pi)) {
 		return -1;
 	}

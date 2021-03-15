@@ -576,6 +576,19 @@ namespace Squirrel
             return relativePath.Split(Path.DirectorySeparatorChar).Length == 4;
         }
 
+        public static bool IsStubNameExcepted(string fullName, string extraStubNames)
+        {
+            if (string.IsNullOrEmpty(extraStubNames))
+                return false;
+
+            var stubName = Path.GetFileName(fullName);
+            var exceptedStubs = extraStubNames.Split(',');
+            if (!exceptedStubs.Any())
+                return false;
+            return exceptedStubs.Contains(stubName);
+        }
+
+
         public static void LogIfThrows(this IFullLogger This, LogLevel level, string message, Action block)
         {
             try {
