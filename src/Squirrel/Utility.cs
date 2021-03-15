@@ -827,6 +827,36 @@ namespace Squirrel
                 })
                 .ToList();
         }
+
+        /// <summary>
+        /// Gets the parent process of specified process.
+        /// </summary>
+        /// <param name="id">The process id.</param>
+        /// <returns>An instance of the Process class.</returns>
+        public static int GetParentProcessId(int id)
+        {
+            Process process = Process.GetProcessById(id);
+            return GetParentProcessId(process.Handle);
+        }
+
+        public static int GetParentProcessId(IntPtr handle)
+        {
+            var pbi = new PROCESS_BASIC_INFORMATION();
+            int returnLength;
+            int status = NativeMethods.NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out returnLength);
+            if (status != 0)
+                return -1;
+
+            try
+            {
+                return pbi.InheritedFromUniqueProcessId.ToInt32();
+            }
+            catch (ArgumentException)
+            {
+                // not found
+                return -1;
+            }
+        }
     }
 
     sealed class SingleGlobalInstance : IDisposable, IEnableLogger
