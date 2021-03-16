@@ -179,17 +179,24 @@ std::wstring FindRealAppDir(const std::wstring& appdir, const std::wstring& appN
 	std::queue<std::wstring> directories;
 	directories.push(appdir);
 
-	while (directories.size() > 0)
+	while (directories.empty())
 	{
 		WIN32_FIND_DATA fileInfo = { 0 };
-		std::wstring searchDir = directories.front();			//current search directory
-		std::wstring search = searchDir + L"\\*";				//current search string (all)
-		std::wstring match = searchDir + L"\\" + appName;			//current desired match
+		const std::wstring& searchDir = directories.front();			//current search directory
+		const std::wstring search = searchDir + L"\\*";				//current search string (all)
+		const std::wstring match = searchDir + L"\\" + appName;			//current desired match
 		HANDLE hFile = FindFirstFile(search.c_str(), &fileInfo);
+
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			directories.pop();
+			continue;
+		}
+
 		do
 		{
-			std::wstring crtFile = std::wstring(fileInfo.cFileName);
-			std::wstring crtFileFull = searchDir + L"\\" + crtFile;
+			const std::wstring crtFile = std::wstring(fileInfo.cFileName);
+			const std::wstring crtFileFull = searchDir + L"\\" + crtFile;
 			if (fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
 				if (crtFile.compare(L".") == 0 || crtFile.compare(L"..") == 0)
@@ -220,9 +227,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	std::wstring appName;
 	appName.assign(FindOwnExecutableName());
 
-	std::wstring workingDir(FindLatestAppDir());
-	std::wstring realWorkingDir(FindRealAppDir(workingDir, appName));
-	std::wstring fullPath(realWorkingDir + L"\\" + appName);
+	const std::wstring workingDir(FindLatestAppDir());
+	const std::wstring realWorkingDir(FindRealAppDir(workingDir, appName));
+	const std::wstring fullPath(realWorkingDir + L"\\" + appName);
 
 	STARTUPINFO si = { 0 };
 	PROCESS_INFORMATION pi = { 0 };

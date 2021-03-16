@@ -159,14 +159,8 @@ namespace Squirrel
                     Utility.PackageDirectoryForAppDir(rootAppDirectory),
                     thisRelease.Filename));
 
-                var releaseDir = Utility.AppDirForRelease(rootAppDirectory, thisRelease);
-                var exePath = Path.Combine(releaseDir, exeName);
-                if(!File.Exists(exePath))
-                {
-                    var matches = Directory.GetFiles(releaseDir, exeName, SearchOption.AllDirectories);
-                    exePath = matches.FirstOrDefault() ?? exePath;
-                }
-                var fileVerInfo = FileVersionInfo.GetVersionInfo(exePath);
+                var exePath = GetExePath(rootAppDirectory, exeName, thisRelease);
+                var fileVerInfo =FileVersionInfo.GetVersionInfo(exePath);
 
                 var ret = new Dictionary<ShortcutLocation, ShellLink>();
                 foreach (var f in (ShortcutLocation[]) Enum.GetValues(typeof(ShortcutLocation))) {
@@ -212,13 +206,7 @@ namespace Squirrel
                     Utility.PackageDirectoryForAppDir(rootAppDirectory),
                     thisRelease.Filename));
 
-                var releaseDir = Utility.AppDirForRelease(rootAppDirectory, thisRelease);
-                var exePath = Path.Combine(releaseDir, exeName);
-                if (!File.Exists(exePath))
-                {
-                    var matches = Directory.GetFiles(releaseDir, exeName, SearchOption.AllDirectories);
-                    exePath = matches.FirstOrDefault() ?? exePath;
-                }
+                var exePath = GetExePath(rootAppDirectory, exeName, thisRelease);
                 var fileVerInfo = FileVersionInfo.GetVersionInfo(exePath);
 
                 foreach (var f in (ShortcutLocation[]) Enum.GetValues(typeof(ShortcutLocation))) {
@@ -278,14 +266,7 @@ namespace Squirrel
                     Utility.PackageDirectoryForAppDir(rootAppDirectory),
                     thisRelease.Filename));
 
-                var releaseDir = Utility.AppDirForRelease(rootAppDirectory, thisRelease);
-                var exePath = Path.Combine(releaseDir, exeName);
-                if (!File.Exists(exePath))
-                {
-                    var matches = Directory.GetFiles(releaseDir, exeName, SearchOption.AllDirectories);
-                    exePath = matches.FirstOrDefault() ?? exePath;
-                }
-
+                var exePath = GetExePath(rootAppDirectory, exeName, thisRelease);
                 var fileVerInfo = FileVersionInfo.GetVersionInfo(exePath);
 
                 foreach (var f in (ShortcutLocation[]) Enum.GetValues(typeof(ShortcutLocation))) {
@@ -733,6 +714,18 @@ namespace Squirrel
                 }
 
                 return Path.Combine(dir, title + ".lnk");
+            }
+
+            private static string GetExePath(string rootAppDirectory, string exeName, ReleaseEntry thisRelease)
+            {
+                var releaseDir = Utility.AppDirForRelease(rootAppDirectory, thisRelease);
+                var exePath = Path.Combine(releaseDir, exeName);
+                if (!File.Exists(exePath))
+                {
+                    var matches = Directory.GetFiles(releaseDir, exeName, SearchOption.AllDirectories);
+                    exePath = matches.FirstOrDefault() ?? exePath;
+                }
+                return exePath;
             }
         }
     }
