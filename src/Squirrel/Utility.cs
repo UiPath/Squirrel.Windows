@@ -576,6 +576,19 @@ namespace Squirrel
             return relativePath.Split(Path.DirectorySeparatorChar).Length == 4;
         }
 
+        public static bool IsStubNameExcepted(string fullName, string extraStubNames)
+        {
+            if (string.IsNullOrEmpty(extraStubNames))
+                return false;
+
+            var stubName = Path.GetFileName(fullName);
+            var exceptedStubs = extraStubNames.Split(',');
+            if (!exceptedStubs.Any())
+                return false;
+            return exceptedStubs.Contains(stubName);
+        }
+
+
         public static void LogIfThrows(this IFullLogger This, LogLevel level, string message, Action block)
         {
             try {
@@ -813,6 +826,36 @@ namespace Squirrel
                     }
                 })
                 .ToList();
+        }
+
+        /// <summary>
+        /// Gets the parent process of specified process.
+        /// </summary>
+        /// <param name="id">The process id.</param>
+        /// <returns>An instance of the Process class.</returns>
+        public static int GetParentProcessId(int id)
+        {
+            Process process = Process.GetProcessById(id);
+            return GetParentProcessId(process.Handle);
+        }
+
+        public static int GetParentProcessId(IntPtr handle)
+        {
+            var pbi = new PROCESS_BASIC_INFORMATION();
+            int returnLength;
+            int status = NativeMethods.NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out returnLength);
+            if (status != 0)
+                return -1;
+
+            try
+            {
+                return pbi.InheritedFromUniqueProcessId.ToInt32();
+            }
+            catch (ArgumentException)
+            {
+                // not found
+                return -1;
+            }
         }
     }
 

@@ -4,6 +4,8 @@
 #include "stdafx.h"
 #include "StubExecutable.h"
 #include <shellapi.h>
+#include <queue>
+#include <VersionHelpers.h>
 
 #include "semver200.h"
 
@@ -41,20 +43,19 @@ wchar_t* FindOwnExecutableName()
 	return ret;
 }
 
-bool Is64BitMachine()
+bool IsMachineSupported()
 {
+	// 32 bit not supported.
 	SYSTEM_INFO si { 0 };
 	GetNativeSystemInfo(&si);
-
-	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) == PROCESSOR_ARCHITECTURE_IA64) ||
-		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) == PROCESSOR_ARCHITECTURE_AMD64))
-	{
-		return true;
-	}
-	else
+	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) != PROCESSOR_ARCHITECTURE_IA64) &&
+		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) != PROCESSOR_ARCHITECTURE_AMD64))
 	{
 		return false;
 	}
+
+	//Windows 7 or lower not supported.
+	return IsWindows8OrGreater();
 }
 
 void DeleteDirectory(const std::wstring& path)
@@ -115,7 +116,7 @@ std::wstring FindLatestAppDir()
 	ourDir.assign(FindRootAppDir());
 	ourDir += L"\\app-*";
 	
-	if (!Is64BitMachine())
+	if (!IsMachineSupported())
 	{
 		DeleteUnsupportedDirs(ourDir);
 	}
@@ -158,6 +159,51 @@ std::wstring FindLatestAppDir()
 	return ret.str();
 }
 
+std::wstring FindRealAppDir(const std::wstring& appdir, const std::wstring& appName)
+{
+	std::queue<std::wstring> directories;
+	directories.push(appdir);
+
+	while (!directories.empty())
+	{
+		WIN32_FIND_DATA fileInfo = { 0 };
+		const std::wstring& searchDir = directories.front();			//current search directory
+		const std::wstring search = searchDir + L"\\*";				//current search string (all)
+		const std::wstring match = searchDir + L"\\" + appName;			//current desired match
+		HANDLE hFile = FindFirstFile(search.c_str(), &fileInfo);
+
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			directories.pop();
+			continue;
+		}
+
+		do
+		{
+			const std::wstring crtFile = std::wstring(fileInfo.cFileName);
+			const std::wstring crtFileFull = searchDir + L"\\" + crtFile;
+			if (fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				if (crtFile.compare(L".") == 0 || crtFile.compare(L"..") == 0)
+					continue;
+				directories.push(crtFileFull);
+			}
+			else if (match.compare(crtFileFull) == 0)
+			{
+				FindClose(hFile);
+				return searchDir;
+			}
+		} while (FindNextFile(hFile, &fileInfo) != 0);
+
+		//move to nextDir
+		FindClose(hFile);
+		directories.pop();
+	}
+
+	// odd that we didn't find it, revert to squirell error management.
+	return appdir;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -166,8 +212,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	std::wstring appName;
 	appName.assign(FindOwnExecutableName());
 
-	std::wstring workingDir(FindLatestAppDir());
-	std::wstring fullPath(workingDir + L"\\" + appName);
+	const std::wstring workingDir(FindLatestAppDir());
+	const std::wstring realWorkingDir(FindRealAppDir(workingDir, appName));
+	const std::wstring fullPath(realWorkingDir + L"\\" + appName);
 
 	STARTUPINFO si = { 0 };
 	PROCESS_INFORMATION pi = { 0 };
@@ -182,7 +229,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	cmdLine += lpCmdLine;
 
 	wchar_t* lpCommandLine = wcsdup(cmdLine.c_str());
-	wchar_t* lpCurrentDirectory = wcsdup(workingDir.c_str());
+	wchar_t* lpCurrentDirectory = wcsdup(realWorkingDir.c_str());
 	if (!CreateProcess(NULL, lpCommandLine, NULL, NULL, true, 0, NULL, lpCurrentDirectory, &si, &pi)) {
 		return -1;
 	}

@@ -1,16 +1,15 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using NuGet;
+using Splat;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Win32;
-using NuGet;
-using Splat;
-using System.Reflection;
 
 namespace Squirrel
 {
@@ -18,8 +17,8 @@ namespace Squirrel
     {
         internal class InstallHelperImpl : IEnableLogger
         {
-            readonly string applicationName;
-            readonly string rootAppDirectory;
+            private readonly string applicationName;
+            private readonly string rootAppDirectory;
 
             public InstallHelperImpl(string applicationName, string rootAppDirectory)
             {
@@ -27,8 +26,9 @@ namespace Squirrel
                 this.rootAppDirectory = rootAppDirectory;
             }
 
-            const string currentVersionRegSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
-            const string uninstallRegSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+            private const string currentVersionRegSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+            private const string uninstallRegSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+
             public async Task<RegistryKey> CreateUninstallerRegistryEntry(string uninstallCmd, string quietSwitch)
             {
                 var releaseContent = File.ReadAllText(Path.Combine(rootAppDirectory, "packages", "RELEASES"), Encoding.UTF8);
@@ -38,29 +38,37 @@ namespace Squirrel
                 // Download the icon and PNG => ICO it. If this doesn't work, who cares
                 var pkgPath = Path.Combine(rootAppDirectory, "packages", latest.Filename);
                 var zp = new ZipPackage(pkgPath);
-                    
+
                 var targetPng = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".png");
                 var targetIco = Path.Combine(rootAppDirectory, "app.ico");
 
                 // NB: Sometimes the Uninstall key doesn't exist
                 using (var parentKey =
                     RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default)
-                        .CreateSubKey("Uninstall", RegistryKeyPermissionCheck.ReadWriteSubTree)) { ; }
+                        .CreateSubKey("Uninstall", RegistryKeyPermissionCheck.ReadWriteSubTree)) {; }
 
                 var key = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default)
                     .CreateSubKey(uninstallRegSubKey + "\\" + applicationName, RegistryKeyPermissionCheck.ReadWriteSubTree);
 
-                if (zp.IconUrl != null && !File.Exists(targetIco)) {
-                    try {
-                        using (var wc = Utility.CreateWebClient()) { 
+                if (zp.IconUrl != null && !File.Exists(targetIco))
+                {
+                    try
+                    {
+                        using (var wc = Utility.CreateWebClient())
+                        {
                             await wc.DownloadFileTaskAsync(zp.IconUrl, targetPng);
-                            using (var fs = new FileStream(targetIco, FileMode.Create)) {
-                                if (zp.IconUrl.AbsolutePath.EndsWith("ico")) {
+                            using (var fs = new FileStream(targetIco, FileMode.Create))
+                            {
+                                if (zp.IconUrl.AbsolutePath.EndsWith("ico"))
+                                {
                                     var bytes = File.ReadAllBytes(targetPng);
                                     fs.Write(bytes, 0, bytes.Length);
-                                } else {
+                                }
+                                else
+                                {
                                     using (var bmp = (Bitmap)Image.FromFile(targetPng))
-                                    using (var ico = Icon.FromHandle(bmp.GetHicon())) {
+                                    using (var ico = Icon.FromHandle(bmp.GetHicon()))
+                                    {
                                         ico.Save(fs);
                                     }
                                 }
@@ -68,9 +76,13 @@ namespace Squirrel
                                 key.SetValue("DisplayIcon", targetIco, RegistryValueKind.String);
                             }
                         }
-                    } catch(Exception ex) {
+                    }
+                    catch (Exception ex)
+                    {
                         this.Log().InfoException("Couldn't write uninstall icon, don't care", ex);
-                    } finally {
+                    }
+                    finally
+                    {
                         File.Delete(targetPng);
                     }
                 }
@@ -93,56 +105,81 @@ namespace Squirrel
                     new { Key = "Language", Value = 0x0409 },
                 };
 
-                foreach (var kvp in stringsToWrite) {
+                foreach (var kvp in stringsToWrite)
+                {
                     key.SetValue(kvp.Key, kvp.Value, RegistryValueKind.String);
                 }
-                foreach (var kvp in dwordsToWrite) {
+                foreach (var kvp in dwordsToWrite)
+                {
                     key.SetValue(kvp.Key, kvp.Value, RegistryValueKind.DWord);
                 }
 
                 return key;
             }
 
-            public void KillAllProcessesBelongingToPackage()
+            public int KillAllProcessesBelongingToPackage()
             {
                 var ourExe = Assembly.GetEntryAssembly();
                 var ourExePath = ourExe != null ? ourExe.Location : null;
 
-                IEnumerable<Tuple<string, int>> running = null;
-                int maxRetries = 3;
-                do
-                {
-                    running = UnsafeUtility.EnumerateProcesses()
-                        .Where(x =>
-                        {
-                            // Processes we can't query will have an empty process name, we can't kill them
-                            // anyways
-                            if (String.IsNullOrWhiteSpace(x.Item1)) return false;
-
-                            // Files that aren't in our root app directory are untouched
-                            if (!x.Item1.StartsWith(rootAppDirectory, StringComparison.OrdinalIgnoreCase)) return false;
-
-                            // Never kill our own EXE
-                            if (ourExePath != null && x.Item1.Equals(ourExePath, StringComparison.OrdinalIgnoreCase)) return false;
-
-                            var name = Path.GetFileName(x.Item1).ToLowerInvariant();
-                            if (name == "squirrel.exe" || name == "update.exe") return false;
-
-                            return true;
-                        });
-
-
-                    running.ForEach(x =>
-                     {
-                         try
+                List<Tuple<string, int>> running = null;
+                running = UnsafeUtility.EnumerateProcesses()
+                         .Where(x =>
                          {
-                             this.WarnIfThrows(() => Process.GetProcessById(x.Item2).Kill());
-                         }
-                         catch { }
-                     });
-                    maxRetries--;
-                }
-                while (running.Any() && maxRetries > 0);
+                             // Processes we can't query will have an empty process name, we can't kill them
+                             // anyways
+                             if (String.IsNullOrWhiteSpace(x.Item1)) return false;
+
+                             // Files that aren't in our root app directory are untouched
+                             if (!x.Item1.StartsWith(rootAppDirectory, StringComparison.OrdinalIgnoreCase)) return false;
+
+                             // Never kill our own EXE
+                             if (ourExePath != null && x.Item1.Equals(ourExePath, StringComparison.OrdinalIgnoreCase)) return false;
+
+                             var name = Path.GetFileName(x.Item1).ToLowerInvariant();
+                             if (name == "squirrel.exe" || name == "update.exe") return false;
+
+                             return true;
+                         }).ToList();
+
+                running.Sort((Tuple<string, int> p1, Tuple<string, int> p2) =>
+                {
+                    if (p1.Item1 == default) return p2.Item1 == default ? -1 : 0;
+                    if (p2.Item1 == default) return 1;
+
+                    var p1Parent = UnsafeUtility.GetParentProcessId(p1.Item2);
+                    var p2Parent = UnsafeUtility.GetParentProcessId(p2.Item2);
+
+                    if (p1Parent == -1 && p2Parent == -1)
+                        return 0;
+
+                    // no parent is higher.
+                    if (p1Parent == -1)
+                        return 1;
+                    if (p2Parent == -1)
+                        return -1;
+
+                    // direct relationships
+                    if (p1.Item2 == p2Parent)
+                        return 1;
+
+                    if (p2.Item2 == p1Parent)
+                        return -1;
+
+                    // don't care
+                    return 0;
+                });
+
+                running.ForEach(x =>
+                {
+                    try
+                    {
+                        this.WarnIfThrows(() => Process.GetProcessById(x.Item2).Kill());
+                    }
+                    catch { }
+                });
+
+                return running.Count;
             }
 
             public Task<RegistryKey> CreateUninstallerRegistryEntry()

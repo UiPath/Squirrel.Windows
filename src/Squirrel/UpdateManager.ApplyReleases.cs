@@ -133,7 +133,6 @@ namespace Squirrel
                 try {
                     this.ErrorIfThrows(() => fixPinnedExecutables(new SemanticVersion(255, 255, 255, 255), true));
                 } catch { }
-
                 await this.ErrorIfThrows(() => Utility.DeleteDirectoryOrJustGiveUp(rootAppDirectory),
                     "Failed to delete app directory: " + rootAppDirectory);
 
@@ -159,7 +158,7 @@ namespace Squirrel
                     Utility.PackageDirectoryForAppDir(rootAppDirectory),
                     thisRelease.Filename));
 
-                var exePath = Path.Combine(Utility.AppDirForRelease(rootAppDirectory, thisRelease), exeName);
+                var exePath = GetExePath(rootAppDirectory, exeName, thisRelease);
                 var fileVerInfo = FileVersionInfo.GetVersionInfo(exePath);
 
                 var ret = new Dictionary<ShortcutLocation, ShellLink>();
@@ -206,7 +205,7 @@ namespace Squirrel
                     Utility.PackageDirectoryForAppDir(rootAppDirectory),
                     thisRelease.Filename));
 
-                var exePath = Path.Combine(Utility.AppDirForRelease(rootAppDirectory, thisRelease), exeName);
+                var exePath = GetExePath(rootAppDirectory, exeName, thisRelease);
                 var fileVerInfo = FileVersionInfo.GetVersionInfo(exePath);
 
                 foreach (var f in (ShortcutLocation[]) Enum.GetValues(typeof(ShortcutLocation))) {
@@ -266,8 +265,8 @@ namespace Squirrel
                     Utility.PackageDirectoryForAppDir(rootAppDirectory),
                     thisRelease.Filename));
 
-                var fileVerInfo = FileVersionInfo.GetVersionInfo(
-                    Path.Combine(Utility.AppDirForRelease(rootAppDirectory, thisRelease), exeName));
+                var exePath = GetExePath(rootAppDirectory, exeName, thisRelease);
+                var fileVerInfo = FileVersionInfo.GetVersionInfo(exePath);
 
                 foreach (var f in (ShortcutLocation[]) Enum.GetValues(typeof(ShortcutLocation))) {
                     if (!locations.HasFlag(f)) continue;
@@ -714,6 +713,18 @@ namespace Squirrel
                 }
 
                 return Path.Combine(dir, title + ".lnk");
+            }
+
+            private static string GetExePath(string rootAppDirectory, string exeName, ReleaseEntry thisRelease)
+            {
+                var releaseDir = Utility.AppDirForRelease(rootAppDirectory, thisRelease);
+                var exePath = Path.Combine(releaseDir, exeName);
+                if (!File.Exists(exePath))
+                {
+                    var matches = Directory.GetFiles(releaseDir, exeName, SearchOption.AllDirectories);
+                    exePath = matches.FirstOrDefault() ?? exePath;
+                }
+                return exePath;
             }
         }
     }

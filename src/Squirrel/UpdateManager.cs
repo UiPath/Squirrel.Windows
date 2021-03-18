@@ -146,10 +146,10 @@ namespace Squirrel
             return appDirName.ToSemanticVersion();
         }
 
-        public void KillAllExecutablesBelongingToPackage()
+        public int  KillAllExecutablesBelongingToPackage()
         {
             var installHelpers = new InstallHelperImpl(applicationName, rootAppDirectory);
-            installHelpers.KillAllProcessesBelongingToPackage();
+            return installHelpers.KillAllProcessesBelongingToPackage();
         }
 
         public string ApplicationName {
@@ -307,11 +307,20 @@ namespace Squirrel
 
             assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 
-            var updateDotExe = Path.Combine(Path.GetDirectoryName(assembly.Location), "..\\Update.exe");
-            var target = new FileInfo(updateDotExe);
+            var updateDotExe = string.Empty;
+            var currentDir = Directory.GetParent(assembly.Location);
+            while (currentDir.Parent != null)
+            {
+                updateDotExe = Path.Combine(currentDir.FullName, "Update.exe");
+                if(File.Exists(updateDotExe))
+                {
+                    return updateDotExe;
+                }
 
-            if (!target.Exists) throw new Exception("Update.exe not found, not a Squirrel-installed app?");
-            return target.FullName;
+                currentDir = currentDir.Parent;
+            }
+            
+            throw new Exception("Update.exe not found, not a Squirrel-installed app?");
         }
     }
 }

@@ -80,10 +80,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		goto out;
 	}
 
-	if (!CFxHelper::Is64BitMachine())
+	if (!CFxHelper::IsMachineSupported())
 	{
 		// Explain this as nicely as possible and give up.
-		MessageBox(0L, L"This program cannot run on a 32 bit computer.", L"Incompatible Operating System", 0);
+		MessageBox(0L, L"This program cannot run on a 32 bit computer and requires windows 8 or higher.", L"Incompatible Operating System", 0);
 		exitCode = E_FAIL;
 		goto out;
 	}

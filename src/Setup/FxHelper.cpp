@@ -56,20 +56,18 @@ bool CFxHelper::IsDotNetInstalled(NetVersion required)
 	return true;
 }
 
-bool CFxHelper::Is64BitMachine()
+bool CFxHelper::IsMachineSupported()
 {
+	// 32 bit not supported.
 	SYSTEM_INFO si{ 0 };
 	GetNativeSystemInfo(&si);
-
-	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) == PROCESSOR_ARCHITECTURE_IA64) || 
-		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) == PROCESSOR_ARCHITECTURE_AMD64))
-	{
-		return true;
-	}
-	else
+	if (((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_IA64) != PROCESSOR_ARCHITECTURE_IA64) &&
+		((si.wProcessorArchitecture & PROCESSOR_ARCHITECTURE_AMD64) != PROCESSOR_ARCHITECTURE_AMD64))
 	{
 		return false;
 	}
+
+	return IsWindows8OrGreater();
 }
 
 int CFxHelper::GetDotNetVersionReleaseNumber(NetVersion version)
