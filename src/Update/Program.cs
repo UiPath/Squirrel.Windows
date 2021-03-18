@@ -169,7 +169,7 @@ namespace Squirrel.Update
 
                     var settingsName = "UiPath.settings";
                     var settingsFile = Path.Combine(mgr.RootAppDirectory, settingsName);
-                    tempSettingsFile = File.Exists(settingsFile) ? Path.GetTempFileName() : null;
+                    tempSettingsFile = File.Exists(settingsFile) ? Path.GetTempPath() + Path.GetRandomFileName() : null;
 
                     if(tempSettingsFile!= null)
                     {
