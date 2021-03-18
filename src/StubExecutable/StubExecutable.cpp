@@ -179,7 +179,7 @@ std::wstring FindRealAppDir(const std::wstring& appdir, const std::wstring& appN
 	std::queue<std::wstring> directories;
 	directories.push(appdir);
 
-	while (directories.empty())
+	while (!directories.empty())
 	{
 		WIN32_FIND_DATA fileInfo = { 0 };
 		const std::wstring& searchDir = directories.front();			//current search directory

@@ -164,12 +164,19 @@ namespace Squirrel.Update
                 if (Directory.Exists(mgr.RootAppDirectory)) {
                     this.Log().Warn("Install path {0} already exists, burning it to the ground", mgr.RootAppDirectory);
 
-                    mgr.KillAllExecutablesBelongingToPackage();
-                    await Task.Delay(500);
+                    int killed = 0;
+                    int maxRetries = 3;
+                    do
+                    {
+                        killed = mgr.KillAllExecutablesBelongingToPackage();
+                        await Task.Delay(500);
 
-                    await this.ErrorIfThrows(() => Utility.DeleteDirectory(mgr.RootAppDirectory),
-                        "Failed to remove existing directory on full install, is the app still running???");
+                        this.Log().Warn($"Deleted {killed} processes");
 
+                        await this.ErrorIfThrows(() => Utility.DeleteDirectory(mgr.RootAppDirectory),
+                            "Failed to remove existing directory on full install, is the app still running???");
+                    }
+                    while (killed > 0 || maxRetries-- > 0);
                     this.ErrorIfThrows(() => Utility.Retry(() => Directory.CreateDirectory(mgr.RootAppDirectory), 3),
                         "Couldn't recreate app directory, perhaps Antivirus is blocking it");
                 }

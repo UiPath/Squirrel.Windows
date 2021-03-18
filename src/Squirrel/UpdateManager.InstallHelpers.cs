@@ -117,7 +117,7 @@ namespace Squirrel
                 return key;
             }
 
-            public void KillAllProcessesBelongingToPackage()
+            public int KillAllProcessesBelongingToPackage()
             {
                 var ourExe = Assembly.GetEntryAssembly();
                 var ourExePath = ourExe != null ? ourExe.Location : null;
@@ -178,6 +178,8 @@ namespace Squirrel
                     }
                     catch { }
                 });
+
+                return running.Count;
             }
 
             public Task<RegistryKey> CreateUninstallerRegistryEntry()

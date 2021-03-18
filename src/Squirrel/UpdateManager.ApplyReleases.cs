@@ -133,7 +133,6 @@ namespace Squirrel
                 try {
                     this.ErrorIfThrows(() => fixPinnedExecutables(new SemanticVersion(255, 255, 255, 255), true));
                 } catch { }
-
                 await this.ErrorIfThrows(() => Utility.DeleteDirectoryOrJustGiveUp(rootAppDirectory),
                     "Failed to delete app directory: " + rootAppDirectory);
 
@@ -160,7 +159,7 @@ namespace Squirrel
                     thisRelease.Filename));
 
                 var exePath = GetExePath(rootAppDirectory, exeName, thisRelease);
-                var fileVerInfo =FileVersionInfo.GetVersionInfo(exePath);
+                var fileVerInfo = FileVersionInfo.GetVersionInfo(exePath);
 
                 var ret = new Dictionary<ShortcutLocation, ShellLink>();
                 foreach (var f in (ShortcutLocation[]) Enum.GetValues(typeof(ShortcutLocation))) {
