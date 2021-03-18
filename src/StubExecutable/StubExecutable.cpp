@@ -5,6 +5,7 @@
 #include "StubExecutable.h"
 #include <shellapi.h>
 #include <queue>
+#include <VersionHelpers.h>
 
 #include "semver200.h"
 
@@ -54,23 +55,7 @@ bool IsMachineSupported()
 	}
 
 	//Windows 7 or lower not supported.
-
-	OSVERSIONINFOEX os{ 0 };
-	DWORDLONG dwlConditionMask = 0;
-	int op = VER_GREATER_EQUAL;
-	os.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-	os.dwMajorVersion = 6;
-	os.dwMinorVersion = 2;
-	os.wServicePackMajor = 0;
-	os.wServicePackMinor = 0;
-
-	VER_SET_CONDITION(dwlConditionMask, VER_MAJORVERSION, op);
-	VER_SET_CONDITION(dwlConditionMask, VER_MINORVERSION, op);
-
-	return VerifyVersionInfo(
-		&os,
-		VER_MAJORVERSION | VER_MINORVERSION,
-		dwlConditionMask);
+	return IsWindows8OrGreater();
 }
 
 void DeleteDirectory(const std::wstring& path)
