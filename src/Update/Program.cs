@@ -159,10 +159,23 @@ namespace Squirrel.Update
             var ourAppName = ReleaseEntry.ParseReleaseFile(File.ReadAllText(releasesPath, Encoding.UTF8))
                 .First().PackageName;
 
+            string tempSettingsFile = null;
+            string destSettingsFile = null;
+
             using (var mgr = new UpdateManager(sourceDirectory, ourAppName)) {
                 this.Log().Info("About to install to: " + mgr.RootAppDirectory);
                 if (Directory.Exists(mgr.RootAppDirectory)) {
                     this.Log().Warn("Install path {0} already exists, burning it to the ground", mgr.RootAppDirectory);
+
+                    var settingsName = "UiPath.settings";
+                    var settingsFile = Path.Combine(mgr.RootAppDirectory, settingsName);
+                    tempSettingsFile = File.Exists(settingsFile) ? Path.GetTempPath() + Path.GetRandomFileName() : null;
+
+                    if(tempSettingsFile!= null)
+                    {
+                        destSettingsFile = settingsFile;
+                        File.Copy(settingsFile, tempSettingsFile);
+                    }
 
                     int killed = 0;
                     int maxRetries = 3;
@@ -188,6 +201,11 @@ namespace Squirrel.Update
                     "Failed to copy Update.exe to " + updateTarget);
 
                 await mgr.FullInstall(silentInstall, progressSource.Raise);
+
+                if (destSettingsFile != null && tempSettingsFile != null)
+                {
+                    File.Copy(tempSettingsFile, destSettingsFile);
+                }
 
                 await this.ErrorIfThrows(() => mgr.CreateUninstallerRegistryEntry(),
                     "Failed to create uninstaller registry entry");
