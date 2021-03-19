@@ -159,6 +159,8 @@ namespace Squirrel.Update
             var ourAppName = ReleaseEntry.ParseReleaseFile(File.ReadAllText(releasesPath, Encoding.UTF8))
                 .First().PackageName;
 
+            this.Log().Warn("Preparing to install");
+
             string tempSettingsFile = null;
             string destSettingsFile = null;
 
@@ -173,23 +175,35 @@ namespace Squirrel.Update
 
                     if(tempSettingsFile!= null)
                     {
+                        this.Log().Warn("Backup uipath.settings");
                         destSettingsFile = settingsFile;
                         File.Copy(settingsFile, tempSettingsFile);
                     }
 
-                    int killed = 0;
+                    bool success = false;
                     int maxRetries = 3;
                     do
                     {
-                        killed = mgr.KillAllExecutablesBelongingToPackage();
+                        var killed = mgr.KillAllExecutablesBelongingToPackage();
                         await Task.Delay(500);
 
                         this.Log().Warn($"Deleted {killed} processes");
 
-                        await this.ErrorIfThrows(() => Utility.DeleteDirectory(mgr.RootAppDirectory),
-                            "Failed to remove existing directory on full install, is the app still running???");
+                        try
+                        {
+                            await this.ErrorIfThrows(() => Utility.DeleteDirectory(mgr.RootAppDirectory),
+                                "Failed to remove existing directory on full install, is the app still running???");
+                            success = true;
+                        }
+                        catch(Exception ex)
+                        {
+                            this.Log().Warn($"Failed to delete whole folder. Reason {ex.ToString()}");
+                            this.Log().Warn($"Attempts left {maxRetries}");
+                            if (maxRetries == 0)
+                                throw;
+                        }
                     }
-                    while (killed > 0 || maxRetries-- > 0);
+                    while (!success || maxRetries-- > 0);
                     this.ErrorIfThrows(() => Utility.Retry(() => Directory.CreateDirectory(mgr.RootAppDirectory), 3),
                         "Couldn't recreate app directory, perhaps Antivirus is blocking it");
                 }
