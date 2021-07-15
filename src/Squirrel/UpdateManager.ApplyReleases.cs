@@ -20,7 +20,7 @@ namespace Squirrel
     {
         internal class ApplyReleasesImpl : IEnableLogger
         {
-            const int InstallHookExecuteTimeoutMin = 2;
+            const int InstallHookExecuteTimeoutMin = 20;
 
             const int UninstallHookExecuteTimeoutSec = 20;
 
